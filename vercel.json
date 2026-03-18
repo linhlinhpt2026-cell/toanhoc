@@ -1,4 +1,5 @@
 {
+  "framework": null,
   "buildCommand": "cp -r assets public/assets && cp -r dist public/dist && cp index.html public/game.html",
   "outputDirectory": "public",
   "rewrites": [
