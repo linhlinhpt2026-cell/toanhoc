@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý bài tập - Tower Math</title>
+  <link rel="icon" type="image/x-icon" href="/assets/favicon.png">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- Đăng nhập -->
+<div id="login-section" class="login-section">
+  <h1>Tower Math - Giáo viên</h1>
+  <div class="card" style="max-width:400px;margin:0 auto">
+    <h2>Đăng nhập giáo viên</h2>
+    <div id="login-form">
+      <div class="form-group">
+        <label for="login-username">Tên đăng nhập</label>
+        <input type="text" id="login-username" placeholder="Nhập tên đăng nhập">
+      </div>
+      <div class="form-group">
+        <label for="login-password">Mật khẩu</label>
+        <input type="password" id="login-password" placeholder="Nhập mật khẩu">
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="login()">Đăng nhập</button>
+      <button class="btn" style="width:100%;background:#eee;color:#333" onclick="toggleRegister()">Tạo tài khoản</button>
+    </div>
+    <div id="register-form" class="hidden">
+      <div class="form-group">
+        <label for="reg-username">Tên đăng nhập</label>
+        <input type="text" id="reg-username" placeholder="Chọn tên đăng nhập">
+      </div>
+      <div class="form-group">
+        <label for="reg-password">Mật khẩu</label>
+        <input type="password" id="reg-password" placeholder="Chọn mật khẩu">
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="register()">Đăng ký</button>
+      <button class="btn" style="width:100%;background:#eee;color:#333" onclick="toggleRegister()">Quay lại đăng nhập</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bảng điều khiển -->
+<div id="dashboard" class="container hidden">
+  <h1>Tower Math</h1>
+  <div class="header-bar">
+    <span class="user-info" id="user-email"></span>
+    <button class="btn btn-logout" onclick="logout()">Đăng xuất</button>
+  </div>
+
+  <!-- Tạo bài tập -->
+  <div class="card">
+    <h2>Tạo bài tập mới</h2>
+    <div class="form-group">
+      <label for="title">Tiêu đề</label>
+      <input type="text" id="title" placeholder="VD: Bài tập toán tuần 1">
+    </div>
+    <div class="form-group">
+      <label for="grade">Cấp độ</label>
+      <select id="grade">
+        <option value="1">Lớp 1 - Cộng/Trừ (0-10)</option>
+        <option value="2">Lớp 2 - Cộng/Trừ (0-100)</option>
+        <option value="3">Lớp 3 - Nhân/Chia</option>
+        <option value="4">Lớp 4 - Phân số</option>
+        <option value="5">Lớp 5 - Số thập phân</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="num-questions">Số câu hỏi (cho tạo ngẫu nhiên)</label>
+      <input type="number" id="num-questions" value="10" min="3" max="30">
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      <button class="btn btn-primary" style="flex:1" onclick="generateRandom()">Tạo câu hỏi ngẫu nhiên</button>
+      <button class="btn" style="flex:1;background:#1976d2;color:#fff" onclick="addManualQuestion()">+ Thêm câu hỏi thủ công</button>
+    </div>
+    <div id="question-preview" class="question-preview hidden"></div>
+    <br>
+    <button class="btn btn-primary" id="btn-create" onclick="createAssignment()" disabled>Tạo bài tập</button>
+  </div>
+
+  <!-- Danh sách bài tập -->
+  <div class="card">
+    <h2>Bài tập của tôi</h2>
+    <div id="assignments-list" class="empty-state">Đang tải...</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/config.js"></script>
+<script>
+const sb = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
+let currentUser = null
+let generatedQuestions = null
+
+// ==================== ĐĂNG NHẬP ====================
+function checkAuth() {
+  const saved = localStorage.getItem('tower_user')
+  if (saved) {
+    currentUser = JSON.parse(saved)
+    if (currentUser.role === 'teacher') {
+      showDashboard()
+    }
+  }
+}
+
+function toggleRegister() {
+  document.getElementById('login-form').classList.toggle('hidden')
+  document.getElementById('register-form').classList.toggle('hidden')
+}
+
+async function login() {
+  const username = document.getElementById('login-username').value.trim()
+  const password = document.getElementById('login-password').value
+  if (!username || !password) { showToast('Vui lòng nhập tên đăng nhập và mật khẩu', 'error'); return }
+
+  const { data, error } = await sb
+    .from('users')
+    .select('*')
+    .eq('username', username)
+    .eq('password', password)
+    .eq('role', 'teacher')
+    .single()
+
+  if (error || !data) {
+    showToast('Tên đăng nhập hoặc mật khẩu không đúng', 'error')
+    return
+  }
+
+  currentUser = { id: data.id, username: data.username, role: data.role }
+  localStorage.setItem('tower_user', JSON.stringify(currentUser))
+  showDashboard()
+}
+
+async function register() {
+  const username = document.getElementById('reg-username').value.trim()
+  const password = document.getElementById('reg-password').value
+  if (!username || !password) { showToast('Vui lòng nhập tên đăng nhập và mật khẩu', 'error'); return }
+
+  const { data: existing } = await sb
+    .from('users')
+    .select('id')
+    .eq('username', username)
+    .single()
+
+  if (existing) {
+    showToast('Tên đăng nhập đã tồn tại', 'error')
+    return
+  }
+
+  const { data, error } = await sb
+    .from('users')
+    .insert({ username, password, role: 'teacher' })
+    .select()
+    .single()
+
+  if (error) {
+    showToast('Đăng ký thất bại: ' + error.message, 'error')
+    return
+  }
+
+  currentUser = { id: data.id, username: data.username, role: data.role }
+  localStorage.setItem('tower_user', JSON.stringify(currentUser))
+  showToast('Tạo tài khoản thành công!', 'success')
+  showDashboard()
+}
+
+function logout() {
+  localStorage.removeItem('tower_user')
+  currentUser = null
+  document.getElementById('dashboard').classList.add('hidden')
+  document.getElementById('login-section').classList.remove('hidden')
+}
+
+function showDashboard() {
+  document.getElementById('login-section').classList.add('hidden')
+  document.getElementById('dashboard').classList.remove('hidden')
+  document.getElementById('user-email').textContent = currentUser.username
+  loadAssignments()
+}
+
+// ==================== TẠO CÂU HỎI ====================
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
+function shuffleArray(arr) {
+  const a = arr.slice()
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+function gcd(a, b) {
+  let x = Math.abs(a), y = Math.abs(b)
+  while (y !== 0) { const t = y; y = x % y; x = t }
+  return x || 1
+}
+
+function formatFraction(num, den) {
+  const g = gcd(num, den)
+  return `${num/g}/${den/g}`
+}
+
+function formatDecimal(value) {
+  const r = Number(value.toFixed(2))
+  if (Math.abs(r - Math.round(r)) < 1e-9) return String(Math.round(r))
+  if (Math.abs((r*10) - Math.round(r*10)) < 1e-9) return r.toFixed(1)
+  return r.toFixed(2)
+}
+
+function generateQuestion(grade) {
+  if (grade <= 2) return genInteger(grade)
+  if (grade === 3) return genGrade3()
+  if (grade === 4) return genFraction()
+  return genDecimal()
+}
+
+function genInteger(grade) {
+  const max = grade === 1 ? 10 : 100
+  const op = Math.random() < 0.5 ? '+' : '-'
+  let a = randomInt(0, max), b = randomInt(0, max), answer, text
+  if (op === '+') {
+    if (a + b > max) { const s = randomInt(0, max); a = randomInt(0, s); b = s - a }
+    answer = a + b; text = `${a} + ${b}`
+  } else {
+    if (a < b) [a, b] = [b, a]
+    answer = a - b; text = `${a} - ${b}`
+  }
+  return makeOptions(text, String(answer), answer, grade === 1 ? 3 : 10, 0, max)
+}
+
+function genGrade3() {
+  const op = Math.random() < 0.5 ? 'x' : ':'
+  let a, b, answer, text
+  if (op === 'x') {
+    a = randomInt(1, 10); b = randomInt(1, 10); answer = a * b; text = `${a} x ${b}`
+  } else {
+    answer = randomInt(1, 10); b = randomInt(1, 10); a = answer * b; text = `${a} : ${b}`
+  }
+  return makeOptions(text, String(answer), answer, 5, 1, 100)
+}
+
+function genFraction() {
+  const ops = ['+', '-', 'x', ':']
+  const sym = ops[randomInt(0, 3)]
+  const aN = randomInt(1, 9), aD = randomInt(2, 9), bN = randomInt(1, 9), bD = randomInt(2, 9)
+  let rN, rD
+  if (sym === '+') { rN = aN*bD + bN*aD; rD = aD*bD }
+  else if (sym === '-') { const l = aN*bD, r = bN*aD; rN = Math.abs(l - r); rD = aD*bD }
+  else if (sym === 'x') { rN = aN*bN; rD = aD*bD }
+  else { rN = aN*bD; rD = aD*bN }
+  const correct = formatFraction(rN, rD)
+  const text = `${aN}/${aD} ${sym} ${bN}/${bD}`
+  const options = new Set([correct])
+  while (options.size < 4) {
+    let wN = rN + randomInt(-3, 3), wD = rD + randomInt(-3, 3)
+    if (wD === 0) wD = 1; if (wN <= 0) wN = Math.abs(wN) + 1
+    options.add(formatFraction(wN, wD))
+  }
+  return { text, correct, options: shuffleArray(Array.from(options)) }
+}
+
+function genDecimal() {
+  const ops = ['+', '-', 'x', ':']
+  const sym = ops[randomInt(0, 3)]
+  let a = randomInt(5, 30) / 10, b = randomInt(5, 30) / 10
+  if (sym === ':' && b === 0) b = 1
+  let raw
+  if (sym === '+') raw = a + b
+  else if (sym === '-') { if (a < b) [a, b] = [b, a]; raw = a - b }
+  else if (sym === 'x') raw = a * b
+  else raw = a / b
+  const correct = formatDecimal(raw)
+  const text = `${formatDecimal(a)} ${sym} ${formatDecimal(b)}`
+  const options = new Set([correct])
+  while (options.size < 4) {
+    let off = randomInt(1, 5) / 10
+    if (Math.random() < 0.5) off *= -1
+    options.add(formatDecimal(raw + off))
+  }
+  return { text, correct, options: shuffleArray(Array.from(options)) }
+}
+
+function makeOptions(text, correct, answer, delta, min, max) {
+  const options = new Set([correct])
+  while (options.size < 4) {
+    let d = randomInt(1, delta)
+    if (Math.random() < 0.5) d *= -1
+    let wrong = answer + d
+    if (wrong < min) wrong = min
+    if (wrong > max) wrong = max
+    options.add(String(wrong))
+  }
+  return { text, correct, options: shuffleArray(Array.from(options)) }
+}
+
+// ==================== CÂU HỎI ====================
+function generateRandom() {
+  const grade = parseInt(document.getElementById('grade').value)
+  const num = parseInt(document.getElementById('num-questions').value) || 10
+  if (!generatedQuestions) generatedQuestions = []
+  for (let i = 0; i < num; i++) {
+    generatedQuestions.push(generateQuestion(grade))
+  }
+  renderQuestions()
+}
+
+function addManualQuestion() {
+  if (!generatedQuestions) generatedQuestions = []
+  generatedQuestions.push({ text: '', correct: '', options: ['', '', '', ''], _manual: true })
+  renderQuestions()
+  const container = document.getElementById('question-preview')
+  container.scrollTop = container.scrollHeight
+}
+
+function renderQuestions() {
+  const container = document.getElementById('question-preview')
+  container.classList.remove('hidden')
+  if (!generatedQuestions || generatedQuestions.length === 0) {
+    container.classList.add('hidden')
+    document.getElementById('btn-create').disabled = true
+    return
+  }
+  container.innerHTML = generatedQuestions.map((q, i) => {
+    if (q._manual) {
+      return `
+        <div class="q-item" style="padding:12px 0;border-bottom:1px solid #eee">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <strong>${i+1}. (Thủ công)</strong>
+            <button class="btn btn-danger btn-sm" onclick="removeQuestion(${i})">Xoá</button>
+          </div>
+          <div class="form-group" style="margin-bottom:8px">
+            <input type="text" placeholder="Nội dung câu hỏi (VD: 3 + 5)" value="${escAttr(q.text)}" onchange="updateManual(${i},'text',null,this.value)" style="font-size:14px;padding:6px 10px">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <input type="text" placeholder="Đáp án A" value="${escAttr(q.options[0])}" onchange="updateManual(${i},'opt',0,this.value)" style="font-size:13px;padding:6px 10px;border:2px solid #e0e0e0;border-radius:6px">
+            <input type="text" placeholder="Đáp án B" value="${escAttr(q.options[1])}" onchange="updateManual(${i},'opt',1,this.value)" style="font-size:13px;padding:6px 10px;border:2px solid #e0e0e0;border-radius:6px">
+            <input type="text" placeholder="Đáp án C" value="${escAttr(q.options[2])}" onchange="updateManual(${i},'opt',2,this.value)" style="font-size:13px;padding:6px 10px;border:2px solid #e0e0e0;border-radius:6px">
+            <input type="text" placeholder="Đáp án D" value="${escAttr(q.options[3])}" onchange="updateManual(${i},'opt',3,this.value)" style="font-size:13px;padding:6px 10px;border:2px solid #e0e0e0;border-radius:6px">
+          </div>
+          <div style="margin-top:6px">
+            <label style="font-size:13px;color:#555">Đáp án đúng:</label>
+            <select onchange="updateManual(${i},'correct',null,this.value)" style="font-size:13px;padding:4px 8px;border:2px solid #e0e0e0;border-radius:6px">
+              <option value="">-- Chọn --</option>
+              ${q.options.map((o, oi) => `<option value="${oi}" ${q.correct === q.options[oi] && q.correct !== '' ? 'selected' : ''}>Đáp án ${['A','B','C','D'][oi]}${o ? ': ' + escAttr(o) : ''}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+      `
+    }
+    return `
+      <div class="q-item" style="display:flex;justify-content:space-between;align-items:center">
+        <span><strong>${i+1}.</strong> ${escHtml(q.text)} = ? <span style="color:#4caf50">(${escHtml(q.correct)})</span></span>
+        <button class="btn btn-danger btn-sm" onclick="removeQuestion(${i})">Xoá</button>
+      </div>
+    `
+  }).join('')
+  document.getElementById('btn-create').disabled = false
+}
+
+function updateManual(idx, field, optIdx, value) {
+  const q = generatedQuestions[idx]
+  if (field === 'text') q.text = value
+  else if (field === 'opt') { q.options[optIdx] = value }
+  else if (field === 'correct') { q.correct = q.options[parseInt(value)] || '' }
+  if (field === 'opt') renderQuestions()
+}
+
+function removeQuestion(idx) {
+  generatedQuestions.splice(idx, 1)
+  renderQuestions()
+}
+
+function escAttr(str) {
+  return String(str || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+function generateId() {
+  return Math.floor(1000000000 + Math.random() * 9000000000).toString()
+}
+
+async function createAssignment() {
+  const title = document.getElementById('title').value.trim()
+  if (!title) { showToast('Vui lòng nhập tiêu đề', 'error'); return }
+  if (!generatedQuestions || generatedQuestions.length === 0) { showToast('Vui lòng thêm ít nhất 1 câu hỏi', 'error'); return }
+
+  for (let i = 0; i < generatedQuestions.length; i++) {
+    const q = generatedQuestions[i]
+    if (q._manual) {
+      if (!q.text.trim()) { showToast(`Câu ${i+1}: vui lòng nhập nội dung câu hỏi`, 'error'); return }
+      if (q.options.some(o => !o.trim())) { showToast(`Câu ${i+1}: vui lòng điền đủ 4 đáp án`, 'error'); return }
+      if (!q.correct) { showToast(`Câu ${i+1}: vui lòng chọn đáp án đúng`, 'error'); return }
+    }
+  }
+
+  const btn = document.getElementById('btn-create')
+  btn.disabled = true
+  btn.textContent = 'Đang tạo...'
+
+  const id = generateId()
+  const grade = parseInt(document.getElementById('grade').value)
+
+  const cleanQuestions = generatedQuestions.map(q => ({
+    text: q.text,
+    correct: q.correct,
+    options: q.options
+  }))
+
+  const { error } = await sb.from('assignments').insert({
+    id,
+    teacher_id: currentUser.id,
+    title,
+    grade,
+    questions: cleanQuestions
+  })
+
+  btn.disabled = false
+  btn.textContent = 'Tạo bài tập'
+
+  if (error) {
+    showToast('Tạo thất bại: ' + error.message, 'error')
+    return
+  }
+
+  showToast('Tạo bài tập thành công!', 'success')
+  document.getElementById('title').value = ''
+  document.getElementById('question-preview').classList.add('hidden')
+  generatedQuestions = null
+  btn.disabled = true
+  loadAssignments()
+}
+
+// ==================== DANH SÁCH BÀI TẬP ====================
+async function loadAssignments() {
+  const container = document.getElementById('assignments-list')
+  container.innerHTML = '<div class="empty-state">Đang tải...</div>'
+
+  const { data: assignments, error } = await sb
+    .from('assignments')
+    .select('*')
+    .eq('teacher_id', currentUser.id)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    container.innerHTML = '<div class="empty-state">Lỗi khi tải danh sách</div>'
+    return
+  }
+
+  if (!assignments || assignments.length === 0) {
+    container.innerHTML = '<div class="empty-state">Chưa có bài tập nào. Hãy tạo bài tập đầu tiên ở trên!</div>'
+    return
+  }
+
+  const ids = assignments.map(a => a.id)
+  const { data: submissions } = await sb
+    .from('submissions')
+    .select('*')
+    .in('assignment_id', ids)
+    .order('completed_at', { ascending: false })
+
+  const subsByAssignment = {}
+  if (submissions) {
+    submissions.forEach(s => {
+      if (!subsByAssignment[s.assignment_id]) subsByAssignment[s.assignment_id] = []
+      subsByAssignment[s.assignment_id].push(s)
+    })
+  }
+
+  container.innerHTML = assignments.map(a => {
+    const url = `${window.location.origin}/${a.id}`
+    const subs = subsByAssignment[a.id] || []
+    const date = new Date(a.created_at).toLocaleDateString('vi-VN')
+    const subsHtml = subs.length > 0 ? `
+      <div class="submissions-list">
+        <strong>${subs.length} bài nộp</strong>
+        ${subs.map(s => `
+          <div class="submission-row">
+            <span>${s.student_username}</span>
+            <span><strong>Đúng ${s.correct_count}/${s.total_questions}</strong> - ${s.score} điểm</span>
+            <span style="color:#999;font-size:12px">${new Date(s.completed_at).toLocaleString('vi-VN')}</span>
+          </div>
+        `).join('')}
+      </div>
+    ` : '<div class="submissions-list" style="color:#999;font-size:13px">Chưa có bài nộp</div>'
+
+    return `
+      <div class="assignment-item">
+        <div class="title">${escHtml(a.title)}</div>
+        <div class="meta">
+          <span class="badge badge-grade">Lớp ${a.grade}</span>
+          &bull; ${a.questions.length} câu hỏi &bull; ${date}
+        </div>
+        <div class="actions">
+          <span class="url-text">${url}</span>
+          <button class="btn btn-copy" onclick="copyUrl('${url}')">Sao chép</button>
+          <button class="btn btn-danger" onclick="deleteAssignment('${a.id}')">Xoá</button>
+        </div>
+        ${subsHtml}
+      </div>
+    `
+  }).join('')
+}
+
+function copyUrl(url) {
+  navigator.clipboard.writeText(url).then(() => {
+    showToast('Đã sao chép đường link!', 'success')
+  }).catch(() => {
+    showToast('Sao chép thất bại', 'error')
+  })
+}
+
+async function deleteAssignment(id) {
+  if (!confirm('Xoá bài tập này và tất cả bài nộp của học sinh?')) return
+  const { error } = await sb.from('assignments').delete().eq('id', id)
+  if (error) { showToast('Xoá thất bại: ' + error.message, 'error'); return }
+  showToast('Đã xoá', 'success')
+  loadAssignments()
+}
+
+// ==================== TIỆN ÍCH ====================
+function escHtml(str) {
+  const div = document.createElement('div')
+  div.textContent = str
+  return div.innerHTML
+}
+
+function showToast(msg, type) {
+  const toast = document.createElement('div')
+  toast.className = `toast toast-${type}`
+  toast.textContent = msg
+  document.body.appendChild(toast)
+  setTimeout(() => toast.remove(), 3000)
+}
+
+// Khởi tạo
+checkAuth()
+</script>
+</body>
+</html>

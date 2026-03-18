@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tower Math - Xây Tháp Toán Học</title>
+  <link rel="icon" type="image/x-icon" href="/assets/favicon.png">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .hero h1 {
+      font-size: 2.5rem;
+      margin-top: 30px;
+      margin-bottom: 8px;
+    }
+    .hero .subtitle {
+      color: rgba(255,255,255,0.85);
+      font-size: 18px;
+      margin-bottom: 30px;
+    }
+    .hero-card {
+      background: white;
+      border-radius: 20px;
+      padding: 32px;
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      margin-bottom: 20px;
+    }
+    .hero-card h2 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    .role-btn {
+      display: block;
+      width: 100%;
+      padding: 18px;
+      margin-bottom: 12px;
+      border: 2px solid #eee;
+      border-radius: 12px;
+      background: white;
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      color: #333;
+    }
+    .role-btn:hover {
+      border-color: #e64a19;
+      background: #fff5f2;
+    }
+    .role-btn .icon { font-size: 28px; display: block; margin-bottom: 4px; }
+    .role-btn .desc { font-size: 13px; color: #999; font-weight: normal; }
+    .divider { color: #ccc; margin: 20px 0; font-size: 14px; }
+    .free-play { color: #999; font-size: 14px; }
+    .free-play a { color: #e64a19; text-decoration: none; font-weight: 600; }
+    .free-play a:hover { text-decoration: underline; }
+    .history-card {
+      background: white;
+      border-radius: 20px;
+      padding: 32px;
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    .history-card h2 { color: #e64a19; margin-bottom: 16px; text-align: center; }
+    .history-item {
+      border: 1px solid #eee;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    .history-item .h-title { font-weight: 600; font-size: 15px; }
+    .history-item .h-meta { color: #888; font-size: 13px; margin-top: 4px; }
+    .history-item .h-score { color: #e64a19; font-weight: bold; font-size: 18px; float: right; margin-top: -28px; }
+    .user-bar {
+      max-width: 500px;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      color: white;
+      font-size: 14px;
+    }
+    .user-bar .btn-logout {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      padding: 6px 16px;
+      font-size: 13px;
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <h1>Tower Math</h1>
+    <p class="subtitle">Xây tháp bằng cách giải toán!</p>
+
+    <!-- Chưa đăng nhập -->
+    <div id="guest-section">
+      <div class="hero-card">
+        <h2>Bắt đầu</h2>
+        <a href="/teacher" class="role-btn">
+          <span class="icon">&#128218;</span>
+          Tôi là Giáo viên
+          <span class="desc">Tạo bài tập và theo dõi kết quả học sinh</span>
+        </a>
+        <div class="divider">hoặc</div>
+        <div id="student-login-section">
+          <p style="color:#666;font-size:15px;margin-bottom:16px">Học sinh? Đăng nhập để xem lịch sử làm bài</p>
+          <div id="s-login-form">
+            <div class="form-group">
+              <input type="text" id="s-username" placeholder="Tên đăng nhập" style="text-align:center">
+            </div>
+            <div class="form-group">
+              <input type="password" id="s-password" placeholder="Mật khẩu" style="text-align:center">
+            </div>
+            <button class="btn btn-primary" style="width:100%;margin-bottom:8px" onclick="studentLogin()">Đăng nhập</button>
+            <button class="btn" style="width:100%;background:#eee;color:#333" onclick="toggleStudentRegister()">Tạo tài khoản</button>
+          </div>
+          <div id="s-register-form" class="hidden">
+            <div class="form-group">
+              <input type="text" id="s-reg-username" placeholder="Chọn tên đăng nhập" style="text-align:center">
+            </div>
+            <div class="form-group">
+              <input type="password" id="s-reg-password" placeholder="Chọn mật khẩu" style="text-align:center">
+            </div>
+            <button class="btn btn-primary" style="width:100%;margin-bottom:8px" onclick="studentRegister()">Đăng ký</button>
+            <button class="btn" style="width:100%;background:#eee;color:#333" onclick="toggleStudentRegister()">Quay lại đăng nhập</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <p class="free-play"><a href="/game">Chơi tự do</a></p>
+      </div>
+    </div>
+
+    <!-- Đã đăng nhập -->
+    <div id="user-section" class="hidden" style="width:100%;display:flex;flex-direction:column;align-items:center">
+      <div class="user-bar">
+        <span id="user-display"></span>
+        <button class="btn btn-logout" onclick="logout()">Đăng xuất</button>
+      </div>
+
+      <div class="hero-card">
+        <a href="/teacher" class="role-btn" id="teacher-link">
+          <span class="icon">&#128218;</span>
+          Trang quản lý giáo viên
+        </a>
+        <p class="free-play"><a href="/game">Chơi tự do</a></p>
+      </div>
+
+      <div class="history-card">
+        <h2>Bài tập đã hoàn thành</h2>
+        <div id="history-list"><p style="color:#999;text-align:center">Đang tải...</p></div>
+      </div>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/config.js"></script>
+<script>
+const sb = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
+let currentUser = null
+
+function checkAuth() {
+  const saved = localStorage.getItem('tower_user')
+  if (saved) {
+    currentUser = JSON.parse(saved)
+    showUserSection()
+  }
+}
+
+function toggleStudentRegister() {
+  document.getElementById('s-login-form').classList.toggle('hidden')
+  document.getElementById('s-register-form').classList.toggle('hidden')
+}
+
+async function studentLogin() {
+  const username = document.getElementById('s-username').value.trim()
+  const password = document.getElementById('s-password').value
+  if (!username || !password) { alert('Vui lòng nhập tên đăng nhập và mật khẩu'); return }
+
+  const { data, error } = await sb
+    .from('users')
+    .select('*')
+    .eq('username', username)
+    .eq('password', password)
+    .single()
+
+  if (error || !data) {
+    alert('Tên đăng nhập hoặc mật khẩu không đúng')
+    return
+  }
+
+  currentUser = { id: data.id, username: data.username, role: data.role }
+  localStorage.setItem('tower_user', JSON.stringify(currentUser))
+  showUserSection()
+}
+
+async function studentRegister() {
+  const username = document.getElementById('s-reg-username').value.trim()
+  const password = document.getElementById('s-reg-password').value
+  if (!username || !password) { alert('Vui lòng nhập tên đăng nhập và mật khẩu'); return }
+
+  const { data: existing } = await sb
+    .from('users')
+    .select('id')
+    .eq('username', username)
+    .single()
+
+  if (existing) {
+    alert('Tên đăng nhập đã tồn tại')
+    return
+  }
+
+  const { data, error } = await sb
+    .from('users')
+    .insert({ username, password, role: 'student' })
+    .select()
+    .single()
+
+  if (error) {
+    alert('Đăng ký thất bại: ' + error.message)
+    return
+  }
+
+  currentUser = { id: data.id, username: data.username, role: data.role }
+  localStorage.setItem('tower_user', JSON.stringify(currentUser))
+  showUserSection()
+}
+
+function logout() {
+  localStorage.removeItem('tower_user')
+  currentUser = null
+  document.getElementById('user-section').classList.add('hidden')
+  document.getElementById('user-section').style.display = ''
+  document.getElementById('guest-section').classList.remove('hidden')
+}
+
+async function showUserSection() {
+  document.getElementById('guest-section').classList.add('hidden')
+  document.getElementById('user-section').classList.remove('hidden')
+  document.getElementById('user-section').style.display = 'flex'
+  document.getElementById('user-display').textContent = 'Xin chào: ' + currentUser.username
+
+  document.getElementById('teacher-link').style.display = currentUser.role === 'teacher' ? 'block' : 'none'
+
+  loadHistory()
+}
+
+async function loadHistory() {
+  const container = document.getElementById('history-list')
+  container.innerHTML = '<p style="color:#999;text-align:center">Đang tải...</p>'
+
+  const { data: submissions, error } = await sb
+    .from('submissions')
+    .select('*, assignments(title, grade)')
+    .eq('student_id', currentUser.id)
+    .order('completed_at', { ascending: false })
+
+  if (error) {
+    container.innerHTML = '<p style="color:#999;text-align:center">Không thể tải lịch sử</p>'
+    return
+  }
+
+  if (!submissions || submissions.length === 0) {
+    container.innerHTML = '<p style="color:#999;text-align:center">Chưa có bài tập nào được hoàn thành.<br>Hãy xin đường link bài tập từ giáo viên!</p>'
+    return
+  }
+
+  container.innerHTML = submissions.map(s => {
+    const a = s.assignments
+    const title = a ? a.title : 'Không rõ'
+    const grade = a ? a.grade : '?'
+    const date = new Date(s.completed_at).toLocaleString('vi-VN')
+    return `
+      <div class="history-item">
+        <div class="h-title">${escHtml(title)}</div>
+        <div class="h-meta">Lớp ${grade} &bull; Đúng ${s.correct_count}/${s.total_questions} &bull; ${date}</div>
+        <div class="h-score">${s.score} điểm</div>
+      </div>
+    `
+  }).join('')
+}
+
+function escHtml(str) {
+  const div = document.createElement('div')
+  div.textContent = str
+  return div.innerHTML
+}
+
+checkAuth()
+</script>
+</body>
+</html>

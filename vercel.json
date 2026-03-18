@@ -1,0 +1,11 @@
+{
+  "buildCommand": "cp -r assets public/assets && cp -r dist public/dist && cp index.html public/game.html",
+  "outputDirectory": "public",
+  "rewrites": [
+    { "source": "/config.js", "destination": "/api/config" },
+    { "source": "/teacher", "destination": "/teacher.html" },
+    { "source": "/game", "destination": "/game.html" },
+    { "source": "/:id(\\d{10})", "destination": "/play.html" },
+    { "source": "/", "destination": "/home.html" }
+  ]
+}

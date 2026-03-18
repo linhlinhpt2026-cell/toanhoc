@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,minimal-ui">
+  <title>Tower Math - Làm bài tập</title>
+  <link rel="icon" type="image/x-icon" href="/assets/favicon.png">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    * { margin:0; padding:0 }
+    img { width:100% }
+    html { background:#fff; height:100% }
+    body {
+      font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+      margin: 0 auto; text-align: center; width: 100%; height: 100%;
+      background: #f95240 url(/assets/main-bg.png);
+    }
+    @media screen and (min-height:560px){html{font-size:100px}}
+    @media screen and (min-height:640px){html{font-size:112.5px}}
+    @media screen and (min-height:720px){html{font-size:125px}}
+    @media screen and (min-height:800px){html{font-size:137.5px}}
+    @media screen and (min-height:880px){html{font-size:150px}}
+    @media screen and (min-height:960px){html{font-size:162.5px}}
+    @media screen and (min-height:1040px){html{font-size:180px}}
+    @media screen and (min-height:1200px){html{font-size:200px}}
+    html { font-size: 17.6vh }
+    #canvas { position:fixed; left:0; top:0; right:0; bottom:0; margin:auto }
+    a { text-decoration:none }
+    li,ol,ul { list-style-type:none; padding:0; margin:0 }
+    .hide { display:none }
+    .loading { background-color:#f05a50; height:100%; width:100% }
+    .loading .main { width:60%; margin:0 auto; color:#fff }
+    .loading .main img { width:60%; margin:1rem auto 0 }
+    .loading .main .title { font-size:.3rem }
+    .loading .main .text { font-size:.15rem }
+    .loading .main .bar { height:.12rem; width:100%; border:3px solid #fff; border-radius:.6rem; margin:.1rem 0 }
+    .loading .main .bar .sub { height:.1rem; width:98%; margin:.008rem auto 0 }
+    .loading .main .bar .percent { height:100%; width:0; background-color:#fff; border-radius:.6rem }
+    .content { height:100vh; margin:0 auto; position:relative }
+    @font-face { font-family:wenxue; src:url(/assets/wenxue.eot); src:url(/assets/wenxue.eot),url(/assets/wenxue.woff),url(/assets/wenxue.ttf),url(/assets/wenxue.svg) }
+    .font-wenxue { font-family:wenxue }
+    #play-login, #result-overlay { font-size: 16px }
+    #play-login *, #result-overlay * { font-size: revert }
+  </style>
+</head>
+<body>
+
+<!-- Đăng nhập trước khi chơi -->
+<div id="play-login" class="play-login">
+  <div class="card">
+    <h2 id="assignment-title">Đang tải bài tập...</h2>
+    <p class="assignment-info" id="assignment-info"></p>
+    <div id="login-prompt">
+      <p style="margin-bottom:16px;color:#666">Đăng nhập để bắt đầu làm bài</p>
+      <div id="login-form">
+        <div class="form-group">
+          <label for="login-username" style="text-align:left">Tên đăng nhập</label>
+          <input type="text" id="login-username" placeholder="Nhập tên đăng nhập">
+        </div>
+        <div class="form-group">
+          <label for="login-password" style="text-align:left">Mật khẩu</label>
+          <input type="password" id="login-password" placeholder="Nhập mật khẩu">
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="login()">Đăng nhập</button>
+        <button class="btn" style="width:100%;background:#eee;color:#333" onclick="toggleRegister()">Tạo tài khoản</button>
+      </div>
+      <div id="register-form" class="hidden">
+        <div class="form-group">
+          <label for="reg-username" style="text-align:left">Tên đăng nhập</label>
+          <input type="text" id="reg-username" placeholder="Chọn tên đăng nhập">
+        </div>
+        <div class="form-group">
+          <label for="reg-password" style="text-align:left">Mật khẩu</label>
+          <input type="password" id="reg-password" placeholder="Chọn mật khẩu">
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="register()">Đăng ký</button>
+        <button class="btn" style="width:100%;background:#eee;color:#333" onclick="toggleRegister()">Quay lại đăng nhập</button>
+      </div>
+    </div>
+    <div id="start-prompt" class="hidden">
+      <p style="margin-bottom:16px;color:#666" id="welcome-msg"></p>
+      <button class="btn btn-primary" onclick="startGame()" id="btn-start">Bắt đầu chơi</button>
+    </div>
+  </div>
+</div>
+
+<!-- Game Canvas -->
+<div id="game-container" class="hidden">
+  <canvas id="canvas" class="hide"></canvas>
+  <div class="content">
+    <div class="loading">
+      <div class="main">
+        <img src="/assets/main-loading.gif">
+        <div class="progress">
+          <div class="title font-wenxue">0%</div>
+          <div class="bar"><div class="sub"><div class="percent"></div></div></div>
+          <div class="text">Đang tải...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Kết quả -->
+<div id="result-overlay" class="result-overlay hidden">
+  <div class="result-card">
+    <h2>Hoàn thành bài tập!</h2>
+    <div class="score-display" id="result-score">0</div>
+    <div class="detail" id="result-correct"></div>
+    <div class="detail" id="result-total"></div>
+    <div id="result-saving" style="color:#999;margin-top:12px">Đang lưu kết quả...</div>
+    <a href="/" class="btn btn-primary" style="margin-top:20px;display:inline-block;text-decoration:none">Về trang chủ</a>
+  </div>
+</div>
+
+<script src="/assets/zepto-1.1.6.min.js"></script>
+<script src="/dist/main.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/config.js"></script>
+<script>
+const sb = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
+let currentUser = null
+let assignmentData = null
+let game = null
+
+const pathParts = window.location.pathname.split('/').filter(Boolean)
+const assignmentId = pathParts[0]
+
+// ==================== ĐĂNG NHẬP ====================
+function checkAuth() {
+  const saved = localStorage.getItem('tower_user')
+  if (saved) {
+    currentUser = JSON.parse(saved)
+    showStartButton()
+  }
+}
+
+function toggleRegister() {
+  document.getElementById('login-form').classList.toggle('hidden')
+  document.getElementById('register-form').classList.toggle('hidden')
+}
+
+async function login() {
+  const username = document.getElementById('login-username').value.trim()
+  const password = document.getElementById('login-password').value
+  if (!username || !password) { alert('Vui lòng nhập tên đăng nhập và mật khẩu'); return }
+
+  const { data, error } = await sb
+    .from('users')
+    .select('*')
+    .eq('username', username)
+    .eq('password', password)
+    .single()
+
+  if (error || !data) {
+    alert('Tên đăng nhập hoặc mật khẩu không đúng')
+    return
+  }
+
+  currentUser = { id: data.id, username: data.username, role: data.role }
+  localStorage.setItem('tower_user', JSON.stringify(currentUser))
+  showStartButton()
+}
+
+async function register() {
+  const username = document.getElementById('reg-username').value.trim()
+  const password = document.getElementById('reg-password').value
+  if (!username || !password) { alert('Vui lòng nhập tên đăng nhập và mật khẩu'); return }
+
+  const { data: existing } = await sb
+    .from('users')
+    .select('id')
+    .eq('username', username)
+    .single()
+
+  if (existing) {
+    alert('Tên đăng nhập đã tồn tại')
+    return
+  }
+
+  const { data, error } = await sb
+    .from('users')
+    .insert({ username, password, role: 'student' })
+    .select()
+    .single()
+
+  if (error) {
+    alert('Đăng ký thất bại: ' + error.message)
+    return
+  }
+
+  currentUser = { id: data.id, username: data.username, role: data.role }
+  localStorage.setItem('tower_user', JSON.stringify(currentUser))
+  showStartButton()
+}
+
+async function showStartButton() {
+  document.getElementById('login-prompt').classList.add('hidden')
+  document.getElementById('start-prompt').classList.remove('hidden')
+  document.getElementById('welcome-msg').textContent = `Xin chào, ${currentUser.username}`
+
+  // Kiểm tra xem đã làm bài này chưa
+  if (assignmentId && currentUser) {
+    const { data: existing } = await sb
+      .from('submissions')
+      .select('*')
+      .eq('assignment_id', assignmentId)
+      .eq('student_id', currentUser.id)
+      .single()
+
+    if (existing) {
+      document.getElementById('start-prompt').innerHTML = `
+        <p style="margin-bottom:12px;color:#666">Xin chào, ${currentUser.username}</p>
+        <div style="background:#fff3e0;border-radius:10px;padding:16px;margin-bottom:16px">
+          <p style="color:#e65100;font-weight:600;margin-bottom:8px">Bạn đã hoàn thành bài tập này rồi</p>
+          <p style="color:#666;font-size:14px">Điểm: <strong>${existing.score}</strong></p>
+          <p style="color:#666;font-size:14px">Đúng: <strong>${existing.correct_count}/${existing.total_questions}</strong></p>
+          <p style="color:#999;font-size:12px;margin-top:4px">${new Date(existing.completed_at).toLocaleString('vi-VN')}</p>
+        </div>
+        <a href="/" class="btn btn-primary" style="display:inline-block;text-decoration:none">Về trang chủ</a>
+      `
+    }
+  }
+}
+
+// ==================== TẢI BÀI TẬP ====================
+async function loadAssignment() {
+  if (!assignmentId) {
+    document.getElementById('assignment-title').textContent = 'Không tìm thấy mã bài tập'
+    document.getElementById('assignment-info').textContent = 'Vui lòng sử dụng đường link hợp lệ'
+    return
+  }
+
+  const { data, error } = await sb
+    .from('assignments')
+    .select('*')
+    .eq('id', assignmentId)
+    .single()
+
+  if (error || !data) {
+    document.getElementById('assignment-title').textContent = 'Không tìm thấy bài tập'
+    document.getElementById('assignment-info').textContent = 'Bài tập này có thể đã bị xoá'
+    return
+  }
+
+  assignmentData = data
+  document.getElementById('assignment-title').textContent = data.title
+  document.getElementById('assignment-info').textContent = `Lớp ${data.grade} - ${data.questions.length} câu hỏi`
+}
+
+// ==================== GAME ====================
+function startGame() {
+  if (!assignmentData) return
+
+  document.getElementById('play-login').classList.add('hidden')
+  document.getElementById('game-container').classList.remove('hidden')
+  document.getElementById('canvas').classList.remove('hide')
+
+  var gameWidth = window.innerWidth
+  var gameHeight = window.innerHeight
+  var ratio = 1.5
+  if (gameHeight / gameWidth < ratio) {
+    gameWidth = Math.ceil(gameHeight / ratio)
+  }
+  $('.content').css({ "height": gameHeight + "px", "width": gameWidth + "px" })
+
+  const option = {
+    width: gameWidth,
+    height: gameHeight,
+    canvasId: 'canvas',
+    soundOn: true,
+    assignmentMode: true,
+    assignmentGrade: assignmentData.grade,
+    assignmentQuestions: assignmentData.questions,
+    onGameOver: handleGameOver,
+    setGameScore: function() {},
+    setGameSuccess: function() {},
+    setGameFailed: function() {}
+  }
+
+  game = TowerGame(option)
+  game.load(function() {
+    game.init()
+    setTimeout(function() {
+      game.playBgm()
+    })
+
+    updateLoading({ success: 1, total: 1, failed: 0 })
+
+    setTimeout(function() {
+      game.start()
+    }, 500)
+  }, updateLoading)
+}
+
+function updateLoading(status) {
+  var success = status.success
+  var total = status.total
+  var percent = parseInt((success / total) * 100)
+  if (percent === 100) {
+    setTimeout(function() {
+      $('.loading').hide()
+    }, 500)
+  }
+  percent = percent > 98 ? 98 : percent
+  percent = percent + '%'
+  $('.loading .title').text(percent)
+  $('.loading .percent').css({ 'width': percent })
+}
+
+async function handleGameOver(result) {
+  document.getElementById('result-overlay').classList.remove('hidden')
+  document.getElementById('result-score').textContent = result.score
+  document.getElementById('result-correct').textContent = `Số câu đúng: ${result.correctCount}`
+  document.getElementById('result-total').textContent = `Tổng số câu: ${result.totalAnswered}`
+
+  if (game) {
+    game.pauseBgm()
+  }
+
+  if (currentUser && assignmentData) {
+    const { error } = await sb.from('submissions').insert({
+      assignment_id: assignmentData.id,
+      student_id: currentUser.id,
+      student_username: currentUser.username,
+      score: result.score,
+      correct_count: result.correctCount,
+      total_questions: result.totalAnswered,
+      answers: result.answers
+    })
+
+    if (error) {
+      document.getElementById('result-saving').textContent = 'Lưu thất bại: ' + error.message
+      document.getElementById('result-saving').style.color = '#f44336'
+    } else {
+      document.getElementById('result-saving').textContent = 'Đã lưu kết quả!'
+      document.getElementById('result-saving').style.color = '#4caf50'
+    }
+  } else {
+    document.getElementById('result-saving').textContent = ''
+  }
+}
+
+// Khởi tạo
+loadAssignment()
+checkAuth()
+</script>
+</body>
+</html>
