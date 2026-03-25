@@ -23,6 +23,10 @@ server.get('/config.js', (req, res) => {
   `)
 })
 
+// API: Generate questions with Gemini AI
+server.use(express.json())
+server.post('/api/generate-questions', require('./api/generate-questions'))
+
 // Landing page
 server.get('/', (req, res) => {
   res.sendFile(path.resolve(__dirname, './public/home.html'))
